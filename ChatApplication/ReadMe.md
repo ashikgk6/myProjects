@@ -4,22 +4,22 @@ A multi-client chat application with thread pooling, implemented in C++ using TC
 
 ## Project Structure
 
-TCP-Chat-App/
-├── client/ # Client components
-│ ├── client.cpp
-│ └── client.h
-├── server/ # Server components
-│ ├── server.cpp
-│ └── server.h
-├── common/ # Shared utilities
-│ ├── socket_utils.cpp
-│ ├── socket_utils.h
-│ ├── thread_pool.cpp
-│ └── thread_pool.h
-├── src/
-│ └── ChatApplication.cpp # Main application entry point
-├── .project # Eclipse project files
-└── .cproject
+- **client/** - Client implementation
+  - `client.cpp` - Client source code
+  - `client.h` - Client header file
+- **server/** - Server implementation
+  - `server.cpp` - Server source code
+  - `server.h` - Server header file
+- **common/** - Shared utilities
+  - `socket_utils.cpp` - Socket wrapper implementation
+  - `socket_utils.h` - Socket wrapper interface
+  - `thread_pool.cpp` - Thread pool implementation
+  - `thread_pool.h` - Thread pool interface
+- **src/**
+  - `ChatApplication.cpp` - Main application entry point
+- Eclipse project files
+  - `.project`
+  - `.cproject`
 
 
 ## Key Features
