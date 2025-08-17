@@ -9,8 +9,9 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include "server/server.h"
-#include "client/client.h"
+
+#include "client.h"
+#include "server.h"
 
 void runServer(int port) {
     try {

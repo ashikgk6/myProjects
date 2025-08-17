@@ -12,10 +12,13 @@
 #include <string>
 #include <netinet/in.h>
 #include <unordered_map>
+#include <memory>
+
+#include "thread_pool.h"
 
 class TCPServer {
 public:
-    TCPServer(int port);
+    TCPServer(int port, size_t thread_pool_size = 4);
     ~TCPServer();
 
     void start();
@@ -25,9 +28,11 @@ public:
 private:
     int serverSocket;
     int port;
-    bool running;
+    std::atomic<bool> running;
     sockaddr_in serverAddr;
     std::unordered_map<int, std::string> clientUsernames;
+    std::unique_ptr<ThreadPool> threadPool;
+    std::mutex serverMutex;
 };
 
 

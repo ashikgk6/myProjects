@@ -7,7 +7,7 @@
 
 
 #include "client.h"
-#include "../common/socket_utils.h"
+#include "socket_utils.h"
 #include <iostream>
 
 TCPClient::TCPClient(const std::string& serverIP, int serverPort)

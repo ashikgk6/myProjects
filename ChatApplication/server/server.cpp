@@ -7,13 +7,12 @@
 
 
 #include "server.h"
-#include "../common/socket_utils.h"
 #include <iostream>
-#include <thread>
-#include <vector>
 #include <csignal>
+#include "socket_utils.h"
 
-TCPServer::TCPServer(int port) : port(port), running(false) {
+TCPServer::TCPServer(int port, size_t thread_pool_size)
+    : port(port), running(false), threadPool(std::make_unique<ThreadPool>(thread_pool_size)) {
     serverSocket = SocketUtils::createSocket();
 }
 
@@ -27,14 +26,26 @@ void TCPServer::start() {
         SocketUtils::listenSocket(serverSocket);
         running = true;
 
-        std::cout << "Server started on port " << port << std::endl;
+        std::cout << "Server started on port " << port
+                  << " with thread pool size " << threadPool->getTaskCount() << std::endl;
 
         while (running) {
             sockaddr_in clientAddr{};
-            int clientSocket = SocketUtils::acceptConnection(serverSocket, clientAddr);
+            socklen_t clientLen = sizeof(clientAddr);
+            int clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientLen);
 
-            std::thread clientThread(&TCPServer::handleClient, this, clientSocket, clientAddr);
-            clientThread.detach();
+            if (clientSocket < 0) {
+                if (running) {
+                    std::cerr << "Accept failed, continuing..." << std::endl;
+                }
+                continue;
+            }
+
+            threadPool->enqueue([this, clientSocket, clientAddr]() {
+                this->handleClient(clientSocket, clientAddr);
+            });
+
+            std::cout << "Active tasks in pool: " << threadPool->getTaskCount() << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "Server error: " << e.what() << std::endl;
@@ -51,10 +62,16 @@ void TCPServer::handleClient(int clientSocket, const sockaddr_in& clientAddr) {
         std::string usernameMessage = SocketUtils::receiveData(clientSocket);
         if (usernameMessage.find("USERNAME:") == 0) {
             std::string username = usernameMessage.substr(9);
-            clientUsernames[clientSocket] = username;
+            {
+                std::lock_guard<std::mutex> lock(serverMutex);
+                clientUsernames[clientSocket] = username;
+            }
             std::cout << "Client " << clientIP << " connected as " << username << std::endl;
         } else {
-            clientUsernames[clientSocket] = "anonymous";
+            {
+                std::lock_guard<std::mutex> lock(serverMutex);
+                clientUsernames[clientSocket] = "anonymous";
+            }
             std::cout << "Client " << clientIP << " connected without username" << std::endl;
         }
 
@@ -64,7 +81,12 @@ void TCPServer::handleClient(int clientSocket, const sockaddr_in& clientAddr) {
                 break;
             }
 
-            std::string username = clientUsernames[clientSocket];
+            std::string username;
+            {
+                std::lock_guard<std::mutex> lock(serverMutex);
+                username = clientUsernames[clientSocket];
+            }
+
             std::cout << username << " (" << clientIP << "): " << message << std::endl;
 
             std::string response = username + "> " + message;
@@ -74,9 +96,14 @@ void TCPServer::handleClient(int clientSocket, const sockaddr_in& clientAddr) {
         std::cerr << "Client handling error: " << e.what() << std::endl;
     }
 
-    std::string username = clientUsernames[clientSocket];
+    std::string username;
+    {
+        std::lock_guard<std::mutex> lock(serverMutex);
+        username = clientUsernames[clientSocket];
+        clientUsernames.erase(clientSocket);
+    }
+
     std::cout << username << " disconnected" << std::endl;
-    clientUsernames.erase(clientSocket);
     SocketUtils::closeSocket(clientSocket);
 }
 
@@ -84,6 +111,7 @@ void TCPServer::stop() {
     if (running) {
         running = false;
         SocketUtils::closeSocket(serverSocket);
+        threadPool->waitAll();
         std::cout << "Server stopped" << std::endl;
     }
 }
