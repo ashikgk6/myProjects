@@ -11,6 +11,7 @@
 
 #include <string>
 #include <netinet/in.h>
+#include <unordered_map>
 
 class TCPServer {
 public:
@@ -18,7 +19,7 @@ public:
     ~TCPServer();
 
     void start();
-    void handleClient(int clientSocket);
+    void handleClient(int clientSocket, const sockaddr_in& clientAddr);
     void stop();
 
 private:
@@ -26,6 +27,7 @@ private:
     int port;
     bool running;
     sockaddr_in serverAddr;
+    std::unordered_map<int, std::string> clientUsernames;
 };
 
 
