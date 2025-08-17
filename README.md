@@ -1,2 +1,2 @@
 # myProjects
-This repository contains the projects done by me :)
+This repository contains the projects done by Ashik G K :)
