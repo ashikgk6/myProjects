@@ -11,7 +11,7 @@
 #include <iostream>
 
 TCPClient::TCPClient(const std::string& serverIP, int serverPort)
-    : serverIP(serverIP), serverPort(serverPort), connected(false) {
+    : serverIP(serverIP), serverPort(serverPort), connected(false), username("anonymous") {
     clientSocket = SocketUtils::createSocket();
 }
 
@@ -19,11 +19,23 @@ TCPClient::~TCPClient() {
     disconnect();
 }
 
+void TCPClient::setUsername(const std::string& username) {
+    this->username = username.empty() ? "anonymous" : username;
+}
+
+std::string TCPClient::getUsername() const {
+    return username;
+}
+
 void TCPClient::connectToServer() {
     try {
         SocketUtils::connectToServer(clientSocket, serverIP, serverPort);
+
+        // Send username first
+        SocketUtils::sendData(clientSocket, "USERNAME:" + username);
+
         connected = true;
-        std::cout << "Connected to server " << serverIP << ":" << serverPort << std::endl;
+        std::cout << "Connected to server " << serverIP << ":" << serverPort << " as " << username << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Connection error: " << e.what() << std::endl;
         throw;
@@ -65,4 +77,3 @@ void TCPClient::disconnect() {
         std::cout << "Disconnected from server" << std::endl;
     }
 }
-

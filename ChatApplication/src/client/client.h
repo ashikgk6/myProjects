@@ -20,12 +20,15 @@ public:
     void sendMessage(const std::string& message);
     std::string receiveResponse();
     void disconnect();
+    void setUsername(const std::string& username);
+    std::string getUsername() const;
 
 private:
     int clientSocket;
     std::string serverIP;
     int serverPort;
     bool connected;
+    std::string username;
 };
 
 

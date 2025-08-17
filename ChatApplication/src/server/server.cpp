@@ -33,11 +33,7 @@ void TCPServer::start() {
             sockaddr_in clientAddr{};
             int clientSocket = SocketUtils::acceptConnection(serverSocket, clientAddr);
 
-            char clientIP[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN);
-            std::cout << "Client connected: " << clientIP << ":" << ntohs(clientAddr.sin_port) << std::endl;
-
-            std::thread clientThread(&TCPServer::handleClient, this, clientSocket);
+            std::thread clientThread(&TCPServer::handleClient, this, clientSocket, clientAddr);
             clientThread.detach();
         }
     } catch (const std::exception& e) {
@@ -46,25 +42,42 @@ void TCPServer::start() {
     }
 }
 
-void TCPServer::handleClient(int clientSocket) {
+void TCPServer::handleClient(int clientSocket, const sockaddr_in& clientAddr) {
     try {
+        char clientIP[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN);
+
+        // First message should be the username
+        std::string usernameMessage = SocketUtils::receiveData(clientSocket);
+        if (usernameMessage.find("USERNAME:") == 0) {
+            std::string username = usernameMessage.substr(9);
+            clientUsernames[clientSocket] = username;
+            std::cout << "Client " << clientIP << " connected as " << username << std::endl;
+        } else {
+            clientUsernames[clientSocket] = "anonymous";
+            std::cout << "Client " << clientIP << " connected without username" << std::endl;
+        }
+
         while (running) {
             std::string message = SocketUtils::receiveData(clientSocket);
             if (message.empty()) {
                 break;
             }
 
-            std::cout << "Received: " << message << std::endl;
+            std::string username = clientUsernames[clientSocket];
+            std::cout << username << " (" << clientIP << "): " << message << std::endl;
 
-            std::string response = "Server received: " + message;
+            std::string response = username + "> " + message;
             SocketUtils::sendData(clientSocket, response);
         }
     } catch (const std::exception& e) {
         std::cerr << "Client handling error: " << e.what() << std::endl;
     }
 
+    std::string username = clientUsernames[clientSocket];
+    std::cout << username << " disconnected" << std::endl;
+    clientUsernames.erase(clientSocket);
     SocketUtils::closeSocket(clientSocket);
-    std::cout << "Client disconnected" << std::endl;
 }
 
 void TCPServer::stop() {

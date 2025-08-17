@@ -24,6 +24,13 @@ void runServer(int port) {
 void runClient(const std::string& serverIP, int serverPort) {
     try {
         TCPClient client(serverIP, serverPort);
+
+        // Get username from user
+        std::cout << "Enter your username: ";
+        std::string username;
+        std::getline(std::cin, username);
+        client.setUsername(username);
+
         client.connectToServer();
 
         while (true) {
